@@ -148,14 +148,14 @@ def main(_):
             train_alpha_doc = []
             for train, _ in get_batch_data(tr_x, tr_y, tr_sen_len, tr_doc_len, FLAGS.batch_size,
                                                 FLAGS.keep_prob1, FLAGS.keep_prob2):
-                _, step, summary, train_alpha_doc = sess.run([optimizer, global_step, train_summary_op, alpha_doc], feed_dict=train)
+                _, step, summary = sess.run([optimizer, global_step, train_summary_op], feed_dict=train)
                 train_summary_writer.add_summary(summary, step)
                 # embed_update = tf.assign(word_embedding, tf.concat(0, [tf.zeros([1, FLAGS.embedding_dim]), word_embedding[1:]]))
                 # sess.run(embed_update)
 
-            fp = open('train_alpha_sen_' + FLAGS.prob_file, 'w')
-            for item in train_alpha_doc:
-                fp.write(' '.join([str(it) for it in item]) + '\n')
+            # fp = open('train_alpha_sen_' + FLAGS.prob_file, 'w')
+            # for item in train_alpha_doc:
+            #     fp.write(' '.join([str(it) for it in item]) + '\n')
 
             # saver.save(sess, save_dir, global_step=step)
 
