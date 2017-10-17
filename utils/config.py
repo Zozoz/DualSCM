@@ -53,8 +53,8 @@ print
 
 def loss_func(y, prob):
     reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(prob, y))
-    loss = - tf.reduce_mean(y * tf.log(prob)) + sum(reg_loss)
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob, labels=y)) + tf.add_n(reg_loss)
+    # loss = - tf.reduce_mean(y * tf.log(prob)) + sum(reg_loss)
     return loss
 
 
