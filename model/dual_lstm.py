@@ -80,9 +80,9 @@ def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
 
 
 def main(_):
-    word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file_path_o, FLAGS.embedding_dim, True)
+    word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file_o, FLAGS.embedding_dim, True)
     word_embedding_o = tf.constant(w2v_o, dtype=tf.float32)
-    word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_path_r, FLAGS.embedding_dim, True)
+    word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
     word_embedding_r = tf.constant(w2v_r, dtype=tf.float32)
 
     with tf.name_scope('inputs'):
@@ -159,38 +159,38 @@ def main(_):
         # saver.restore(sess, '/-')
 
         tr_x, tr_y, tr_sen_len, tr_doc_len = load_inputs_document(
-            FLAGS.train_file_path,
+            FLAGS.train_file,
             word_id_mapping_o,
             FLAGS.max_sentence_len,
             FLAGS.max_doc_len
         )
         te_x, te_y, te_sen_len, te_doc_len = load_inputs_document(
-            FLAGS.test_file_path,
+            FLAGS.test_file,
             word_id_mapping_o,
             FLAGS.max_sentence_len,
             FLAGS.max_doc_len
         )
         tr_x_r, tr_y_r, tr_sen_len_r, tr_doc_len_r = load_inputs_document(
-            FLAGS.train_file_path_r,
+            FLAGS.train_file_r,
             word_id_mapping_r,
             FLAGS.max_sentence_len,
             FLAGS.max_doc_len
         )
         te_x_r, te_y_r, te_sen_len_r, te_doc_len_r = load_inputs_document(
-            FLAGS.test_file_path_r,
+            FLAGS.test_file_r,
             word_id_mapping_r,
             FLAGS.max_sentence_len,
             FLAGS.max_doc_len
         )
         # v_x, v_y, v_sen_len, v_doc_len = load_inputs_document(
-        #     FLAGS.validate_file_path,
+        #     FLAGS.validate_file,
         #     word_id_mapping,
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len
         # )
 
         # v_x, v_y, v_sen_len, v_doc_len = load_inputs_document(
-        #     FLAGS.validate_file_path,
+        #     FLAGS.validate_file,
         #     word_id_mapping,
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len

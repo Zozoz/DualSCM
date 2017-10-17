@@ -25,11 +25,11 @@ def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2):
     alpha_sen = mlp_attention_layer(hiddens_sen, sen_len, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 1)
     outputs_sen = tf.reshape(tf.matmul(alpha_sen, hiddens_sen), [-1, FLAGS.max_doc_len, 2 * FLAGS.n_hidden])
 
-    sen_len = tf.reshape(sen_len, [-1, FLAGS.max_doc_len])
-    alpha = 1.0 - tf.cast(tf.reshape(sen_len / (tf.reduce_sum(sen_len, 1, keep_dims=True) + 1), [-1, FLAGS.max_doc_len, 1]), tf.float32)
-    outputs_new = alpha * outputs_sen
+    # sen_len = tf.reshape(sen_len, [-1, FLAGS.max_doc_len])
+    # alpha = 1.0 - tf.cast(tf.reshape(sen_len / (tf.reduce_sum(sen_len, 1, keep_dims=True) + 1), [-1, FLAGS.max_doc_len, 1]), tf.float32)
+    # outputs_new = alpha * outputs_sen
 
-    hiddens_doc = bi_dynamic_rnn(cell, outputs_new, FLAGS.n_hidden, doc_len, FLAGS.max_doc_len, 'doc', 'all')
+    hiddens_doc = bi_dynamic_rnn(cell, outputs_sen, FLAGS.n_hidden, doc_len, FLAGS.max_doc_len, 'doc', 'all')
     alpha_doc = mlp_attention_layer(hiddens_doc, doc_len, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 2)
     outputs_doc = tf.reshape(tf.matmul(alpha_doc, hiddens_doc), [-1, 2 * FLAGS.n_hidden])
 
@@ -50,7 +50,7 @@ def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, id_=1):
 
 def main(_):
     with tf.device('/gpu:0'):
-        word_id_mapping, w2v = load_w2v(FLAGS.embedding_file_path, FLAGS.embedding_dim, True)
+        word_id_mapping, w2v = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
         word_embedding = tf.constant(w2v, dtype=tf.float32, name='word_embedding')
         # word_embedding = tf.Variable(w2v, name='word_embedding')
 
@@ -110,19 +110,19 @@ def main(_):
         # saver.restore(sess, '/-')
 
         tr_x, tr_y, tr_sen_len, tr_doc_len = load_inputs_document(
-            FLAGS.train_file_path,
+            FLAGS.train_file,
             word_id_mapping,
             FLAGS.max_sentence_len,
             FLAGS.max_doc_len
         )
         te_x, te_y, te_sen_len, te_doc_len = load_inputs_document(
-            FLAGS.test_file_path,
+            FLAGS.test_file,
             word_id_mapping,
             FLAGS.max_sentence_len,
             FLAGS.max_doc_len
         )
         # v_x, v_y, v_sen_len, v_doc_len = load_inputs_document(
-        #     FLAGS.validate_file_path,
+        #     FLAGS.validate_file,
         #     word_id_mapping,
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len

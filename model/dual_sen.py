@@ -61,7 +61,7 @@ def cnn(inputs, sen_len, keep_prob1, keep_prob2, _id='1'):
 
 
 def main(_):
-    word_id_mapping, w2v = load_w2v(FLAGS.embedding_file_path_o, FLAGS.embedding_dim, True)
+    word_id_mapping, w2v = load_w2v(FLAGS.embedding_file_o, FLAGS.embedding_dim, True)
     word_embedding = tf.constant(w2v, dtype=tf.float32, name='word_embedding')
 
     keep_prob1 = tf.placeholder(tf.float32)
@@ -112,12 +112,12 @@ def main(_):
         sess.run(init)
 
         tr_x, tr_sen_len, tr_y = load_inputs_twitter(
-            FLAGS.train_file_path,
+            FLAGS.train_file,
             word_id_mapping,
             FLAGS.max_sentence_len
         )
         te_x, te_sen_len, te_y = load_inputs_twitter(
-            FLAGS.test_file_path,
+            FLAGS.test_file,
             word_id_mapping,
             FLAGS.max_sentence_len
         )
