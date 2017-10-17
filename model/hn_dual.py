@@ -112,7 +112,7 @@ def main(_):
         save_dir = 'temp_model/' + str(timestamp) + '_' + title + '/'
         saver = saver_func(save_dir)
 
-        init = tf.initialize_all_variables()
+        init = tf.global_variables_initializer()
         sess.run(init)
 
         # saver.restore(sess, '/-')
@@ -182,7 +182,7 @@ def main(_):
 
             acc, cost, cnt = 0., 0., 0
             p, ty, py = [], [], []
-            for test, num in get_batch_data(te_x, te_sen_len, te_doc_len, te_x_r, te_sen_len_r, te_doc_len_r, te_y, 2000, 1.0, 1.0, False):
+            for test, num in get_batch_data(te_x, te_sen_len, te_doc_len, te_x_r, te_sen_len_r, te_doc_len_r, te_y, FLAGS.batch_size, 1.0, 1.0, False):
                 _loss, _acc, _p, _ty, _py = sess.run([loss, accuracy_num, prob, true_y, pred_y], feed_dict=test)
                 p += list(_p)
                 ty += list(_ty)
