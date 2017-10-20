@@ -49,46 +49,57 @@ def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, id_=1):
 
 
 def main(_):
-    with tf.device('/gpu:0'):
-        word_id_mapping, w2v = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
-        word_embedding = tf.constant(w2v, dtype=tf.float32, name='word_embedding')
-        # word_embedding = tf.Variable(w2v, name='word_embedding')
+    word_id_mapping, w2v = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    word_embedding = tf.constant(w2v, dtype=tf.float32, name='word_embedding')
+    # word_embedding = tf.Variable(w2v, name='word_embedding')
 
-        keep_prob1 = tf.placeholder(tf.float32)
-        keep_prob2 = tf.placeholder(tf.float32)
+    keep_prob1 = tf.placeholder(tf.float32)
+    keep_prob2 = tf.placeholder(tf.float32)
 
-        with tf.name_scope('inputs'):
-            x = tf.placeholder(tf.int32, [None, FLAGS.max_doc_len, FLAGS.max_sentence_len])
-            y = tf.placeholder(tf.float32, [None, FLAGS.n_class])
-            sen_len = tf.placeholder(tf.int32, [None, FLAGS.max_doc_len])
-            doc_len = tf.placeholder(tf.int32, None)
+    with tf.name_scope('inputs'):
+        x = tf.placeholder(tf.int32, [None, FLAGS.max_doc_len, FLAGS.max_sentence_len])
+        y = tf.placeholder(tf.float32, [None, FLAGS.n_class])
+        sen_len = tf.placeholder(tf.int32, [None, FLAGS.max_doc_len])
+        doc_len = tf.placeholder(tf.int32, None)
 
-        inputs = tf.nn.embedding_lookup(word_embedding, x)
-        inputs = tf.reshape(inputs, [-1, FLAGS.max_sentence_len, FLAGS.embedding_dim])
+    inputs = tf.nn.embedding_lookup(word_embedding, x)
+    inputs = tf.reshape(inputs, [-1, FLAGS.max_sentence_len, FLAGS.embedding_dim])
 
-        if FLAGS.method == 'ATT':
-            prob, alpha_sen, alpha_doc = hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2)
-        else:
-            prob = hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2)
+    if FLAGS.method == 'ATT':
+        prob, alpha_sen, alpha_doc = hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2)
+    else:
+        prob = hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2)
 
-        loss = loss_func(y, prob)
-        acc_num, acc_prob = acc_func(y, prob)
-        global_step = tf.Variable(0, name='tr_global_step', trainable=False)
-        optimizer = train_func(loss, FLAGS.learning_rate, global_step)
-        true_y = tf.argmax(y, 1)
-        pred_y = tf.argmax(prob, 1)
+    loss = loss_func(y, prob)
+    acc_num, acc_prob = acc_func(y, prob)
+    global_step = tf.Variable(0, name='tr_global_step', trainable=False)
+    optimizer = train_func(loss, FLAGS.learning_rate, global_step)
+    true_y = tf.argmax(y, 1)
+    pred_y = tf.argmax(prob, 1)
 
-        title = '-d1-{}d2-{}b-{}r-{}l2-{}sen-{}dim-{}h-{}c-{}'.format(
-            FLAGS.keep_prob1,
-            FLAGS.keep_prob2,
-            FLAGS.batch_size,
-            FLAGS.learning_rate,
-            FLAGS.l2_reg,
-            FLAGS.max_sentence_len,
-            FLAGS.embedding_dim,
-            FLAGS.n_hidden,
-            FLAGS.n_class
-        )
+    title = '-d1-{}d2-{}b-{}r-{}l2-{}sen-{}dim-{}h-{}c-{}'.format(
+        FLAGS.keep_prob1,
+        FLAGS.keep_prob2,
+        FLAGS.batch_size,
+        FLAGS.learning_rate,
+        FLAGS.l2_reg,
+        FLAGS.max_sentence_len,
+        FLAGS.embedding_dim,
+        FLAGS.n_hidden,
+        FLAGS.n_class
+    )
+
+    def get_batch_data(x_in, y_in, sen_len_in, doc_len_in, batch_size, kp1, kp2, is_shuffle=True):
+        for index in batch_index(len(y_in), batch_size, 1, is_shuffle):
+            feed_dict = {
+                x: x_in[index],
+                y: y_in[index],
+                sen_len: sen_len_in[index],
+                doc_len: doc_len_in[index],
+                keep_prob1: kp1,
+                keep_prob2: kp2,
+            }
+            yield feed_dict, len(index)
 
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
@@ -127,18 +138,6 @@ def main(_):
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len
         # )
-
-        def get_batch_data(x_in, y_in, sen_len_in, doc_len_in, batch_size, kp1, kp2, is_shuffle=True):
-            for index in batch_index(len(y_in), batch_size, 1, is_shuffle):
-                feed_dict = {
-                    x: x_in[index],
-                    y: y_in[index],
-                    sen_len: sen_len_in[index],
-                    doc_len: doc_len_in[index],
-                    keep_prob1: kp1,
-                    keep_prob2: kp2,
-                }
-                yield feed_dict, len(index)
 
         max_acc = 0.
         max_prob, max_ty, max_py = None, None, None

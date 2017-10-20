@@ -98,6 +98,21 @@ def main(_):
         FLAGS.n_class
     )
 
+    def get_batch_data(xo, slo, dlo, xr, slr, dlr, yy, batch_size, kp1, kp2, is_shuffle=True):
+        for index in batch_index(len(yy), batch_size, 1, is_shuffle):
+            feed_dict = {
+                x_o: xo[index],
+                x_r: xr[index],
+                y: yy[index],
+                sen_len_o: slo[index],
+                sen_len_r: slr[index],
+                doc_len_o: dlo[index],
+                doc_len_r: dlr[index],
+                keep_prob1: kp1,
+                keep_prob2: kp2,
+            }
+            yield feed_dict, len(index)
+
     conf = tf.ConfigProto(allow_soft_placement=True)
     conf.gpu_options.allow_growth = True
     with tf.Session(config=conf) as sess:
@@ -154,21 +169,6 @@ def main(_):
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len
         # )
-
-        def get_batch_data(xo, slo, dlo, xr, slr, dlr, yy, batch_size, kp1, kp2, is_shuffle=True):
-            for index in batch_index(len(yy), batch_size, 1, is_shuffle):
-                feed_dict = {
-                    x_o: xo[index],
-                    x_r: xr[index],
-                    y: yy[index],
-                    sen_len_o: slo[index],
-                    sen_len_r: slr[index],
-                    doc_len_o: dlo[index],
-                    doc_len_r: dlr[index],
-                    keep_prob1: kp1,
-                    keep_prob2: kp2,
-                }
-                yield feed_dict, len(index)
 
         max_acc, max_prob, step = 0., None, None
         max_ty, max_py = None, None
