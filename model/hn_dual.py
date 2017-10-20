@@ -201,7 +201,7 @@ def main(_):
                 max_prob = p
                 max_ty = ty
                 max_py = py
-                saver.save(sess, save_dir, global_step=step)
+                # saver.save(sess, save_dir, global_step=step)
 
         print 'P:', precision_score(max_ty, max_py, average=None)
         print 'R:', recall_score(max_ty, max_py, average=None)
