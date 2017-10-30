@@ -37,7 +37,7 @@ def lstm_att_sen(inputs, sen_len, keep_prob1, keep_prob2):
     return logits
 
 
-def main_(_):
+def main(_):
     word_id_mapping, w2v = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
     word_embedding = tf.constant(w2v, dtype=tf.float32)
 

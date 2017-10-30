@@ -46,7 +46,7 @@ def dual_att_sen(inputs_o, sen_len_o, inputs_r, sen_len_r, keep_prob1, keep_prob
     return logits
 
 
-def main_(_):
+def main(_):
     word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
     word_embedding_o = tf.constant(w2v_o, dtype=tf.float32)
     word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
