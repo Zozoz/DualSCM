@@ -17,7 +17,7 @@ from utils.data_helper import load_w2v, batch_index, load_inputs_document_nohn
 
 
 def lstm_sen(inputs, sen_len, keep_prob1, keep_prob2):
-    print 'I am dual-sen!'
+    print 'I am lstm-sen!'
     cell = tf.contrib.rnn.LSTMCell
     inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     hiddens = bi_dynamic_rnn(cell, inputs, FLAGS.n_hidden, sen_len, FLAGS.max_sentence_len, 'sentence_o', 'last')
@@ -26,7 +26,7 @@ def lstm_sen(inputs, sen_len, keep_prob1, keep_prob2):
 
 
 def lstm_att_sen(inputs, sen_len, keep_prob1, keep_prob2):
-    print 'I am dual-att-sen!'
+    print 'I am lstm-att-sen!'
     cell = tf.contrib.rnn.LSTMCell
     inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     hiddens = bi_dynamic_rnn(cell, inputs, FLAGS.n_hidden, sen_len, FLAGS.max_sentence_len, 'sentence_o', 'all')
