@@ -284,17 +284,9 @@ def load_inputs_document(input_file, word_id_file, max_sen_len, max_doc_len, _ty
         doc = ' '.join(line[1:])
         sentences = doc.split('<sssss>')
         i = 0
-        pre = ''
         flag = False
         for sentence in sentences:
             j = 0
-            if _type == 'CNN':
-                sentence = pre + ' ' + sentence
-                if len(sentence.split()) < 5:
-                    pre = sentence
-                    continue
-                else:
-                    pre = ''
             for word in sentence.split():
                 if j < max_sen_len:
                     if word in word_to_id:
@@ -302,9 +294,10 @@ def load_inputs_document(input_file, word_id_file, max_sen_len, max_doc_len, _ty
                         j += 1
                 else:
                     break
-            t_sen_len[i] = j
-            i += 1
-            flag = True
+            if j > 2:
+                t_sen_len[i] = j
+                i += 1
+                flag = True
             if i >= max_doc_len:
                 break
         if flag:
