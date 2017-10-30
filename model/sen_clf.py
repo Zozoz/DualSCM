@@ -147,7 +147,7 @@ def main(_):
             summary = sess.run(test_summary_op, feed_dict={test_loss: cost, test_acc: acc})
             test_summary_writer.add_summary(summary, step)
             if acc / cnt > max_acc:
-                max_acc = acc / cnt
+                max_acc = acc
                 max_prob = p
 
         fp = open(FLAGS.prob_file, 'w')
