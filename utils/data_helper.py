@@ -92,6 +92,16 @@ def load_aspect2id(input_file, word_id_mapping, w2v, embedding_dim):
     return aspect2id, np.asarray(a2v, dtype=np.float32)
 
 
+def load_y2id_id2y(f):
+    y2id = dict()
+    id2y = dict()
+    for line in open(f):
+        y, _id = line.split()
+        y2id[y] = int(_id)
+        id2y[int(_id)] = y
+    return y2id, id2y
+
+
 def change_y_to_onehot(y):
     from collections import Counter
     print Counter(y)
