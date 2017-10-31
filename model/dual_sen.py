@@ -13,7 +13,7 @@ import tensorflow as tf
 from utils.config import *
 from newbie_nn.nn_layer import bi_dynamic_rnn, softmax_layer
 from newbie_nn.att_layer import mlp_attention_layer
-from utils.data_helper import load_w2v, batch_index, load_inputs_document_nohn
+from utils.data_helper import load_w2v, batch_index, load_inputs_document_nohn, load_word_embedding
 
 
 def dual_sen(inputs_o, sen_len_o, inputs_r, sen_len_r, keep_prob1, keep_prob2):
@@ -47,9 +47,11 @@ def dual_att_sen(inputs_o, sen_len_o, inputs_r, sen_len_r, keep_prob1, keep_prob
 
 
 def main(_):
-    word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    # word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    word_id_mapping_o, w2v_o = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file, FLAGS.embedding_dim, True)
     word_embedding_o = tf.constant(w2v_o, dtype=tf.float32)
-    word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
+    # word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
+    word_id_mapping_r, w2v_r = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
     word_embedding_r = tf.constant(w2v_r, dtype=tf.float32)
 
     with tf.name_scope('inputs'):

@@ -65,7 +65,7 @@ def load_word_embedding(word_id_file, w2v_file, embedding_dim, is_skip=False):
     for k in word_to_id.keys():
         if k not in word_dict:
             word_dict[k] = cnt
-            w2v = np.row_stack((w2v, np.random.uniform(-0.01, 0.01, (embedding_dim,))))
+            w2v = np.row_stack((w2v, np.random.uniform(-0.25, 0.25, (embedding_dim,))))
             cnt += 1
     print len(word_dict), len(w2v)
     return word_dict, w2v

@@ -13,7 +13,7 @@ import tensorflow as tf
 from utils.config import *
 from newbie_nn.nn_layer import bi_dynamic_rnn, softmax_layer
 from newbie_nn.att_layer import mlp_attention_layer
-from utils.data_helper import load_w2v, batch_index, load_inputs_document_nohn
+from utils.data_helper import load_w2v, batch_index, load_inputs_document_nohn, load_word_embedding
 
 
 def lstm_sen(inputs, sen_len, keep_prob1, keep_prob2):
@@ -38,7 +38,8 @@ def lstm_att_sen(inputs, sen_len, keep_prob1, keep_prob2):
 
 
 def main(_):
-    word_id_mapping, w2v = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    # word_id_mapping, w2v = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    word_id_mapping, w2v = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file, FLAGS.embedding_dim, True)
     word_embedding = tf.constant(w2v, dtype=tf.float32)
 
     with tf.name_scope('inputs'):
