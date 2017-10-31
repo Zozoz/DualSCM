@@ -12,35 +12,43 @@ import tensorflow as tf
 
 from sklearn.metrics import precision_score, recall_score, f1_score
 from utils.config import *
-from newbie_nn.nn_layer import dynamic_rnn, bi_dynamic_rnn, softmax_layer
+from newbie_nn.nn_layer import bi_dynamic_rnn, softmax_layer
 from newbie_nn.att_layer import mlp_attention_layer, softmax_with_len
 from utils.data_helper import load_w2v, batch_index, load_word_embedding, load_inputs_document
 
+tf.app.flags.DEFINE_float('alpha', 0.6, 'learning rate')
+tf.app.flags.DEFINE_string('embedding_file_path_o', '', 'embedding file path')
+tf.app.flags.DEFINE_string('embedding_file_path_r', '', 'embedding file path')
 
-def hn_inter_att(inputs_o, sen_len_o, doc_len_o, inputs_r, sen_len_r, doc_len_r, keep_prob1, keep_prob2, _id='0'):
+
+def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
+    inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     cell = tf.contrib.rnn.LSTMCell
-    # Original Part
-    inputs_o = tf.nn.dropout(inputs_o, keep_prob=keep_prob1)
-    sen_len_o = tf.reshape(sen_len_o, [-1])
-    hiddens_sen_o = bi_dynamic_rnn(cell, inputs_o, FLAGS.n_hidden, sen_len_o, FLAGS.max_sentence_len, 'sentence_o', 'all')
-    alpha_sen_o = mlp_attention_layer(hiddens_sen_o, sen_len_o, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'sentence_o')
-    outputs_sen_o = tf.reshape(tf.matmul(alpha_sen_o, hiddens_sen_o), [-1, FLAGS.max_doc_len, 2 * FLAGS.n_hidden])
-    hiddens_doc_o = bi_dynamic_rnn(cell, outputs_sen_o, FLAGS.n_hidden, doc_len_o, FLAGS.max_doc_len, 'doc_o', 'all')
+    sen_len = tf.reshape(sen_len, [-1])
+    hiddens_sen = bi_dynamic_rnn(cell, inputs, FLAGS.n_hidden, sen_len, FLAGS.max_sentence_len, 'sentence' + _id, 'all')
+    alpha_sen = mlp_attention_layer(hiddens_sen, sen_len, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'sentence' + _id)
+    outputs_sen = tf.reshape(tf.matmul(alpha_sen, hiddens_sen), [-1, FLAGS.max_doc_len, 2 * FLAGS.n_hidden])
 
-    # Reverse Part
-    inputs_r = tf.nn.dropout(inputs_r, keep_prob=keep_prob1)
-    sen_len_r = tf.reshape(sen_len_r, [-1])
-    hiddens_sen_r = bi_dynamic_rnn(cell, inputs_r, FLAGS.n_hidden, sen_len_r, FLAGS.max_sentence_len, 'sentence_r', 'all')
-    alpha_sen_r = mlp_attention_layer(hiddens_sen_r, sen_len_r, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'sentence_r')
-    outputs_sen_r = tf.reshape(tf.matmul(alpha_sen_r, hiddens_sen_r), [-1, FLAGS.max_doc_len, 2 * FLAGS.n_hidden])
-    hiddens_doc_r = bi_dynamic_rnn(cell, outputs_sen_r, FLAGS.n_hidden, doc_len_r, FLAGS.max_doc_len, 'doc_r', 'all')
+    sen_len = tf.reshape(sen_len, [-1])
+    sen_len = tf.cast(sen_len, tf.float32)
+    alpha = 1.0 - tf.cast(sen_len / (tf.reduce_sum(sen_len, 1, keep_dims=True) + 1), tf.float32)
+    alpha = tf.reshape(softmax_with_len(alpha, doc_len, FLAGS.max_doc_len), [-1, FLAGS.max_doc_len, 1])
+    outputs_sen *= alpha
 
-    # Combined Part
-    hiddens_doc = tf.concat([hiddens_doc_o, hiddens_doc_r], 2)  # batch_size * max_doc_len * 4n_hidden
-    alpha_doc = mlp_attention_layer(hiddens_doc, doc_len_o, 4 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'doc')
-    outputs_doc = tf.reshape(tf.matmul(alpha_doc, hiddens_doc), [-1, 4 * FLAGS.n_hidden])
-    logits = softmax_layer(outputs_doc, 4 * FLAGS.n_hidden, FLAGS.random_base, keep_prob2, FLAGS.l2_reg, FLAGS.n_class)
-    return logits
+    hiddens_doc = bi_dynamic_rnn(cell, outputs_sen, FLAGS.n_hidden, doc_len, FLAGS.max_doc_len, 'doc' + _id, 'all')
+    alpha_doc = mlp_attention_layer(hiddens_doc, doc_len, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'doc' + _id)
+    outputs_doc = tf.reshape(tf.matmul(alpha_doc, hiddens_doc), [-1, 2 * FLAGS.n_hidden])
+    return outputs_doc
+
+
+def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
+    inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
+    cell = tf.contrib.rnn.LSTMCell
+    sen_len = tf.reshape(sen_len, [-1])
+    hiddens_sen = bi_dynamic_rnn(cell, inputs, FLAGS.n_hidden, sen_len, FLAGS.max_sentence_len, 'sentence' + _id, FLAGS.t1)
+    hiddens_sen = tf.reshape(hiddens_sen, [-1, FLAGS.max_doc_len, 2 * FLAGS.n_hidden])
+    hidden_doc = bi_dynamic_rnn(cell, hiddens_sen, FLAGS.n_hidden, doc_len, FLAGS.max_doc_len, 'doc' + _id, FLAGS.t2)
+    return hidden_doc
 
 
 def main(_):
@@ -63,29 +71,33 @@ def main(_):
         doc_len_r = tf.placeholder(tf.int32, None)
         y = tf.placeholder(tf.float32, [None, FLAGS.n_class])
 
+    with tf.device('/gpu:0'):
         inputs_o = tf.nn.embedding_lookup(word_embedding_o, x_o)
         inputs_o = tf.reshape(inputs_o, [-1, FLAGS.max_sentence_len, FLAGS.embedding_dim])
+        if FLAGS.method == 'ATT':
+            h_o = hn_att(inputs_o, sen_len_o, doc_len_o, keep_prob1, keep_prob2, 'o')
+        else:
+            h_o = hn(inputs_o, sen_len_o, doc_len_o, keep_prob1, keep_prob2, 'o')
+        prob_o = softmax_layer(h_o, 2 * FLAGS.n_hidden, FLAGS.random_base, keep_prob2, FLAGS.l2_reg, FLAGS.n_class, 'o')
+    with tf.device('/gpu:1'):
         inputs_r = tf.nn.embedding_lookup(word_embedding_r, x_r)
         inputs_r = tf.reshape(inputs_r, [-1, FLAGS.max_sentence_len, FLAGS.embedding_dim])
+        if FLAGS.method == 'ATT':
+            h_r = hn_att(inputs_r, sen_len_r, doc_len_r, keep_prob1, keep_prob2, 'r')
+        else:
+            h_r = hn(inputs_r, sen_len_r, doc_len_r, keep_prob1, keep_prob2, 'r')
+        prob_r = softmax_layer(h_r, 2 * FLAGS.n_hidden, FLAGS.random_base, keep_prob2, FLAGS.l2_reg, FLAGS.n_class, 'r')
 
-    prob = hn_inter_att(inputs_o, sen_len_o, doc_len_o, inputs_r, sen_len_r, doc_len_r, keep_prob1, keep_prob2)
+    r_y = tf.reverse(y, [False, True])
+    reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    # loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean((tf.ones(tf.shape(y)) - y) * tf.log(prob_r)) + sum(reg_loss)
+    # prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * (tf.ones(tf.shape(prob_r)) - prob_r)
+    loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean(r_y * tf.log(prob_r)) + sum(reg_loss)
+    prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
 
-    with tf.name_scope('loss'):
-        reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob, labels=y)) + tf.add_n(reg_loss)
-        all_vars = [var for var in tf.global_variables()]
-
-    with tf.name_scope('train'):
-        global_step = tf.Variable(0, name='global_step', trainable=False)
-        optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
-        grads, global_norm = tf.clip_by_global_norm(tf.gradients(loss, all_vars), 5.0)
-        train_op = optimizer.apply_gradients(zip(grads, all_vars), name='train_op', global_step=global_step)
-
-    with tf.name_scope('predict'):
-        cor_pred = tf.equal(tf.argmax(prob, 1), tf.argmax(y, 1))
-        accuracy = tf.reduce_mean(tf.cast(cor_pred, tf.float32))
-        accuracy_num = tf.reduce_sum(tf.cast(cor_pred, tf.int32))
-
+    acc_num, acc_prob = acc_func(y, prob)
+    global_step = tf.Variable(0, name='tr_global_step', trainable=False)
+    optimizer = train_func(loss, FLAGS.learning_rate, global_step)
     true_y = tf.argmax(y, 1)
     pred_y = tf.argmax(prob, 1)
 
@@ -101,23 +113,7 @@ def main(_):
         FLAGS.n_class
     )
 
-    def get_batch_data(xo, slo, dlo, xr, slr, dlr, yy, batch_size, kp1, kp2, is_shuffle=True):
-        for index in batch_index(len(yy), batch_size, 1, is_shuffle):
-            feed_dict = {
-                x_o: xo[index],
-                x_r: xr[index],
-                y: yy[index],
-                sen_len_o: slo[index],
-                sen_len_r: slr[index],
-                doc_len_o: dlo[index],
-                doc_len_r: dlr[index],
-                keep_prob1: kp1,
-                keep_prob2: kp2,
-            }
-            yield feed_dict, len(index)
-
     conf = tf.ConfigProto(allow_soft_placement=True)
-    conf.gpu_options.allow_growth = True
     with tf.Session(config=conf) as sess:
         import time
         timestamp = str(int(time.time()))
@@ -125,7 +121,7 @@ def main(_):
         test_loss = tf.placeholder(tf.float32)
         test_acc = tf.placeholder(tf.float32)
         train_summary_op, test_summary_op, validate_summary_op, train_summary_writer, test_summary_writer, \
-        validate_summary_writer = summary_func(loss, accuracy, test_loss, test_acc, _dir, title, sess)
+        validate_summary_writer = summary_func(loss, acc_prob, test_loss, test_acc, _dir, title, sess)
 
         save_dir = 'temp_model/' + str(timestamp) + '_' + title + '/'
         saver = saver_func(save_dir)
@@ -160,33 +156,48 @@ def main(_):
             FLAGS.max_doc_len
         )
         # v_x, v_y, v_sen_len, v_doc_len = load_inputs_document(
-        #     FLAGS.validate_file_path,
+        #     FLAGS.validate_file,
         #     word_id_mapping,
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len
         # )
 
         # v_x, v_y, v_sen_len, v_doc_len = load_inputs_document(
-        #     FLAGS.validate_file_path,
+        #     FLAGS.validate_file,
         #     word_id_mapping,
         #     FLAGS.max_sentence_len,
         #     FLAGS.max_doc_len
         # )
+
+        def get_batch_data(xo, slo, dlo, xr, slr, dlr, yy, batch_size, kp1, kp2, is_shuffle=True):
+            for index in batch_index(len(yy), batch_size, 1, is_shuffle):
+                feed_dict = {
+                    x_o: xo[index],
+                    x_r: xr[index],
+                    y: yy[index],
+                    sen_len_o: slo[index],
+                    sen_len_r: slr[index],
+                    doc_len_o: dlo[index],
+                    doc_len_r: dlr[index],
+                    keep_prob1: kp1,
+                    keep_prob2: kp2,
+                }
+                yield feed_dict, len(index)
 
         max_acc, max_prob, step = 0., None, None
         max_ty, max_py = None, None
         for i in xrange(FLAGS.n_iter):
             for train, _ in get_batch_data(tr_x, tr_sen_len, tr_doc_len, tr_x_r, tr_sen_len_r, tr_doc_len_r, tr_y,
                                            FLAGS.batch_size, FLAGS.keep_prob1, FLAGS.keep_prob2):
-                _, step, summary = sess.run([train_op, global_step, train_summary_op], feed_dict=train)
+                _, step, summary = sess.run([optimizer, global_step, train_summary_op], feed_dict=train)
                 train_summary_writer.add_summary(summary, step)
-                # embed_update = tf.assign(word_embedding, tf.concat([tf.zeros([1, FLAGS.embedding_dim]), word_embedding[1:]]), 0)
+                # embed_update = tf.assign(word_embedding, tf.concat(0, [tf.zeros([1, FLAGS.embedding_dim]), word_embedding[1:]]))
                 # sess.run(embed_update)
 
             acc, cost, cnt = 0., 0., 0
             p, ty, py = [], [], []
-            for test, num in get_batch_data(te_x, te_sen_len, te_doc_len, te_x_r, te_sen_len_r, te_doc_len_r, te_y, FLAGS.batch_size, 1.0, 1.0, False):
-                _loss, _acc, _p, _ty, _py = sess.run([loss, accuracy_num, prob, true_y, pred_y], feed_dict=test)
+            for test, num in get_batch_data(te_x, te_sen_len, te_doc_len, te_x_r, te_sen_len_r, te_doc_len_r, te_y, 2000, 1.0, 1.0, False):
+                _loss, _acc, _p, _ty, _py = sess.run([loss, acc_num, prob, true_y, pred_y], feed_dict=test)
                 p += list(_p)
                 ty += list(_ty)
                 py += list(_py)
@@ -204,7 +215,7 @@ def main(_):
                 max_prob = p
                 max_ty = ty
                 max_py = py
-                # saver.save(sess, save_dir, global_step=step)
+                saver.save(sess, save_dir, global_step=step)
 
         print 'P:', precision_score(max_ty, max_py, average=None)
         print 'R:', recall_score(max_ty, max_py, average=None)

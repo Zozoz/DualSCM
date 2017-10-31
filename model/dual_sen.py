@@ -51,8 +51,9 @@ def main(_):
     word_id_mapping_o, w2v_o = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file, FLAGS.embedding_dim, True)
     word_embedding_o = tf.constant(w2v_o, dtype=tf.float32)
     # word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
-    word_id_mapping_r, w2v_r = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
-    word_embedding_r = tf.constant(w2v_r, dtype=tf.float32)
+    # word_id_mapping_r, w2v_r = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
+    word_id_mapping_r = word_id_mapping_o
+    word_embedding_r = tf.constant(w2v_o, dtype=tf.float32)
 
     with tf.name_scope('inputs'):
         keep_prob1 = tf.placeholder(tf.float32)
