@@ -17,11 +17,10 @@ from newbie_nn.att_layer import mlp_attention_layer, softmax_with_len
 from utils.data_helper import load_w2v, batch_index, load_word_embedding, load_inputs_document
 
 tf.app.flags.DEFINE_float('alpha', 0.6, 'learning rate')
-tf.app.flags.DEFINE_string('embedding_file_path_o', '', 'embedding file path')
-tf.app.flags.DEFINE_string('embedding_file_path_r', '', 'embedding file path')
 
 
 def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
+    print 'I am HAN!'
     inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     cell = tf.contrib.rnn.LSTMCell
     sen_len = tf.reshape(sen_len, [-1])
@@ -29,11 +28,11 @@ def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
     alpha_sen = mlp_attention_layer(hiddens_sen, sen_len, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'sentence' + _id)
     outputs_sen = tf.reshape(tf.matmul(alpha_sen, hiddens_sen), [-1, FLAGS.max_doc_len, 2 * FLAGS.n_hidden])
 
-    sen_len = tf.reshape(sen_len, [-1])
-    sen_len = tf.cast(sen_len, tf.float32)
-    alpha = 1.0 - tf.cast(sen_len / (tf.reduce_sum(sen_len, 1, keep_dims=True) + 1), tf.float32)
-    alpha = tf.reshape(softmax_with_len(alpha, doc_len, FLAGS.max_doc_len), [-1, FLAGS.max_doc_len, 1])
-    outputs_sen *= alpha
+    # sen_len = tf.reshape(sen_len, [-1])
+    # sen_len = tf.cast(sen_len, tf.float32)
+    # alpha = 1.0 - tf.cast(sen_len / (tf.reduce_sum(sen_len, 1, keep_dims=True) + 1), tf.float32)
+    # alpha = tf.reshape(softmax_with_len(alpha, doc_len, FLAGS.max_doc_len), [-1, FLAGS.max_doc_len, 1])
+    # outputs_sen *= alpha
 
     hiddens_doc = bi_dynamic_rnn(cell, outputs_sen, FLAGS.n_hidden, doc_len, FLAGS.max_doc_len, 'doc' + _id, 'all')
     alpha_doc = mlp_attention_layer(hiddens_doc, doc_len, 2 * FLAGS.n_hidden, FLAGS.l2_reg, FLAGS.random_base, 'doc' + _id)
@@ -42,6 +41,7 @@ def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
 
 
 def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
+    print 'I am HN!'
     inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     cell = tf.contrib.rnn.LSTMCell
     sen_len = tf.reshape(sen_len, [-1])

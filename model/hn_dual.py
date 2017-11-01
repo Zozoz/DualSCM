@@ -18,6 +18,7 @@ from utils.data_helper import load_w2v, batch_index, load_word_embedding, load_i
 
 
 def hn_inter_att(inputs_o, sen_len_o, doc_len_o, inputs_r, sen_len_r, doc_len_r, keep_prob1, keep_prob2, _id='0'):
+    print 'I am hn-inter-att!'
     cell = tf.contrib.rnn.LSTMCell
     # Original Part
     inputs_o = tf.nn.dropout(inputs_o, keep_prob=keep_prob1)

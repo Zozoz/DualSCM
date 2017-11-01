@@ -18,6 +18,7 @@ from utils.data_helper import load_w2v, batch_index, load_word_embedding, load_i
 
 
 def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2):
+    print 'I am HAN!'
     inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     cell = tf.contrib.rnn.LSTMCell
     sen_len = tf.reshape(sen_len, [-1])
@@ -38,6 +39,7 @@ def hn_att(inputs, sen_len, doc_len, keep_prob1, keep_prob2):
 
 
 def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, id_=1):
+    print 'I am HN!'
     inputs = tf.nn.dropout(inputs, keep_prob=keep_prob1)
     cell = tf.contrib.rnn.LSTMCell
     sen_len = tf.reshape(sen_len, [-1])
