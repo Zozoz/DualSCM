@@ -52,8 +52,8 @@ def hn(inputs, sen_len, doc_len, keep_prob1, keep_prob2, _id='1'):
 
 
 def main(_):
-    # word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
-    word_id_mapping_o, w2v_o = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    word_id_mapping_o, w2v_o = load_w2v(FLAGS.embedding_file, FLAGS.embedding_dim, True)
+    # word_id_mapping_o, w2v_o = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file, FLAGS.embedding_dim, True)
     word_embedding_o = tf.constant(w2v_o, dtype=tf.float32)
     # word_id_mapping_r, w2v_r = load_w2v(FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
     # word_id_mapping_r, w2v_r = load_word_embedding(FLAGS.word_id_file, FLAGS.embedding_file_r, FLAGS.embedding_dim, True)
@@ -88,19 +88,28 @@ def main(_):
             h_r = hn(inputs_r, sen_len_r, doc_len_r, keep_prob1, keep_prob2, 'r')
         prob_r = softmax_layer(h_r, 2 * FLAGS.n_hidden, FLAGS.random_base, keep_prob2, FLAGS.l2_reg, FLAGS.n_class, 'r')
 
-    r_y = tf.reverse(y, [False, True])
-    reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    # loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean(r_y * tf.log(prob_r)) + sum(reg_loss)
-    # prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
+    with tf.name_scope('loss'):
+        r_y = tf.reverse(y, [False, True])
+        reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        # loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean(r_y * tf.log(prob_r)) + sum(reg_loss)
+        # prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
+        loss_o = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_o, labels=y))
+        loss_r = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_r, labels=r_y))
+        loss = loss_o + loss_r  # + tf.add_n(reg_loss)
+        prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
+        all_vars = [var for var in tf.global_variables()]
 
-    loss_o = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_o, labels=y))
-    loss_r = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_r, labels=r_y))
-    loss = loss_o + loss_r
-    prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
+    with tf.name_scope('train'):
+        global_step = tf.Variable(0, name='global_step', trainable=False)
+        optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+        grads, global_norm = tf.clip_by_global_norm(tf.gradients(loss, all_vars), 5.0)
+        train_op = optimizer.apply_gradients(zip(grads, all_vars), name='train_op', global_step=global_step)
 
-    acc_num, acc_prob = acc_func(y, prob)
-    global_step = tf.Variable(0, name='tr_global_step', trainable=False)
-    optimizer = train_func(loss, FLAGS.learning_rate, global_step)
+    with tf.name_scope('predict'):
+        cor_pred = tf.equal(tf.argmax(prob, 1), tf.argmax(y, 1))
+        acc_prob = tf.reduce_mean(tf.cast(cor_pred, tf.float32))
+        acc_num = tf.reduce_sum(tf.cast(cor_pred, tf.int32))
+
     true_y = tf.argmax(y, 1)
     pred_y = tf.argmax(prob, 1)
 
@@ -192,7 +201,7 @@ def main(_):
         for i in xrange(FLAGS.n_iter):
             for train, _ in get_batch_data(tr_x, tr_sen_len, tr_doc_len, tr_x_r, tr_sen_len_r, tr_doc_len_r, tr_y,
                                            FLAGS.batch_size, FLAGS.keep_prob1, FLAGS.keep_prob2):
-                _, step, summary = sess.run([optimizer, global_step, train_summary_op], feed_dict=train)
+                _, step, summary = sess.run([train_op, global_step, train_summary_op], feed_dict=train)
                 train_summary_writer.add_summary(summary, step)
                 # embed_update = tf.assign(word_embedding, tf.concat(0, [tf.zeros([1, FLAGS.embedding_dim]), word_embedding[1:]]))
                 # sess.run(embed_update)
@@ -218,7 +227,7 @@ def main(_):
                 max_prob = p
                 max_ty = ty
                 max_py = py
-                saver.save(sess, save_dir, global_step=step)
+                # saver.save(sess, save_dir, global_step=step)
 
         print 'P:', precision_score(max_ty, max_py, average=None)
         print 'R:', recall_score(max_ty, max_py, average=None)
