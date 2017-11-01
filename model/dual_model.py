@@ -90,9 +90,12 @@ def main(_):
 
     r_y = tf.reverse(y, [False, True])
     reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    # loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean((tf.ones(tf.shape(y)) - y) * tf.log(prob_r)) + sum(reg_loss)
-    # prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * (tf.ones(tf.shape(prob_r)) - prob_r)
-    loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean(r_y * tf.log(prob_r)) + sum(reg_loss)
+    # loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean(r_y * tf.log(prob_r)) + sum(reg_loss)
+    # prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
+
+    loss_o = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_o, labels=y))
+    loss_r = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_r, labels=r_y))
+    loss = loss_o + loss_r
     prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
 
     acc_num, acc_prob = acc_func(y, prob)
