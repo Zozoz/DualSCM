@@ -89,14 +89,14 @@ def main(_):
         prob_r = softmax_layer(h_r, 2 * FLAGS.n_hidden, FLAGS.random_base, keep_prob2, FLAGS.l2_reg, FLAGS.n_class, 'r')
 
     with tf.name_scope('loss'):
-        r_y = tf.reverse(y, [False, True])
+        r_y = tf.reverse(y, [True])
         reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         # loss = - tf.reduce_mean(y * tf.log(prob_o)) - tf.reduce_mean(r_y * tf.log(prob_r)) + sum(reg_loss)
         # prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
         loss_o = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_o, labels=y))
-        loss_r = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_r, labels=r_y))
-        loss = loss_o + loss_r  # + tf.add_n(reg_loss)
-        prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [False, True])
+        loss_r = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prob_r, labels=y))
+        loss = loss_o + loss_r + tf.add_n(reg_loss)
+        prob = FLAGS.alpha * prob_o + (1.0 - FLAGS.alpha) * tf.reverse(prob_r, [True])
         all_vars = [var for var in tf.global_variables()]
 
     with tf.name_scope('train'):
