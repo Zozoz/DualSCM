@@ -130,8 +130,8 @@ def main(_):
         step = 0
         for i in xrange(FLAGS.n_iter):
             for train, _ in get_batch_data(tr_x, tr_sen_len, tr_y, FLAGS.batch_size, FLAGS.keep_prob1, FLAGS.keep_prob2):
-                _, step = sess.run([train_op, global_step], feed_dict=train)
-                # train_summary_writer.add_summary(summary, step)
+                _, step, summary = sess.run([train_op, global_step, train_summary_op], feed_dict=train)
+                train_summary_writer.add_summary(summary, step)
 
             acc, cost, cnt = 0., 0., 0
             p = []
